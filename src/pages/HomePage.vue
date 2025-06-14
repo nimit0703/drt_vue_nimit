@@ -1,199 +1,529 @@
 <template>
-  <div class="min-h-screen bg-gray-900 text-white p-6">
-    <div class="max-w-7xl mx-auto">
-      <h1 class="text-3xl font-bold mb-6 text-center">🛰️ Satellite Dashboard</h1>
+  <div class="min-h-screen bg-gray-900 text-white">
+    <!-- Mobile Layout -->
+    <div class="lg:hidden">
+      <!-- Mobile Header -->
+      <div class="bg-gray-800 p-4 sticky top-0 z-20">
+        <div class="flex items-center justify-between mb-4">
+          <h1 class="text-xl font-bold">Create Asset List</h1>
+          <!-- Mobile Selected Count Badge -->
+          <div class="flex items-center space-x-2">
+            <div class="bg-cyan-500 text-gray-900 px-3 py-1 rounded-full text-sm font-medium">
+              {{ selectedSatellites.length }} selected
+            </div>
+            <button
+              @click="showMobilePanel = !showMobilePanel"
+              class="bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
 
-      <!-- Search Section -->
-      <div class="bg-gray-800 rounded-lg p-4 mb-6">
-        <div class="flex gap-4">
+        <!-- Mobile Search -->
+        <div class="relative mb-3">
           <input
             v-model="searchInput"
             @keyup.enter="handleSearch"
             type="text"
-            placeholder="Search by Name or NORAD ID (Press Enter to search)"
-            class="flex-1 px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+            placeholder="Search satellites..."
+            class="w-full px-4 py-3 pl-10 rounded-lg bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
           />
-          <button 
-            @click="handleSearch" 
-            class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg transition-colors"
-          >
-            Search
-          </button>
-          <button 
-            @click="clearSearch" 
-            class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-
-      <!-- Filters Section -->
-      <div class="bg-gray-800 rounded-lg p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <!-- Object Types Filter -->
-          <div>
-            <label class="block text-sm font-semibold mb-2">Object Types</label>
-            <div class="space-y-2 max-h-32 overflow-y-auto bg-gray-700 p-2 rounded">
-              <label v-for="type in objectTypeOptions" :key="type" class="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  :value="type"
-                  v-model="selectedObjectTypes"
-                  class="rounded"
-                />
-                <span class="text-sm">{{ type }} ({{ getTypeCount(type) }})</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Orbit Codes Filter -->
-          <div>
-            <label class="block text-sm font-semibold mb-2">Orbit Codes</label>
-            <div class="space-y-2 max-h-32 overflow-y-auto bg-gray-700 p-2 rounded">
-              <label v-for="code in orbitCodeOptions" :key="code" class="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  :value="code"
-                  v-model="selectedOrbitCodes"
-                  class="rounded"
-                />
-                <span class="text-sm">{{ code }} ({{ getOrbitCount(code) }})</span>
-              </label>
-            </div>
-          </div>
+          <svg class="absolute left-3 top-3.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
         </div>
 
-        <div class="flex gap-4 items-center">
-          <button 
-            @click="applyFilters" 
-            class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg transition-colors"
+        <!-- Mobile Filters Toggle -->
+        <button
+          @click="showMobileFilters = !showMobileFilters"
+          class="w-full bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors text-sm flex items-center justify-between"
+        >
+          <span>Filters & Types</span>
+          <svg 
+            class="w-4 h-4 transition-transform"
+            :class="showMobileFilters ? 'rotate-180' : ''"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
           >
-            Apply Filters
-          </button>
-          <button 
-            @click="clearFilters" 
-            class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors"
-          >
-            Clear Filters
-          </button>
-          <span class="text-sm text-gray-400">
-            Showing {{ filteredSatellites.length }} of {{ satellites.length }} satellites
-          </span>
-        </div>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="flex justify-center items-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <span class="ml-3 text-lg">Loading satellites...</span>
-      </div>
-
-      <!-- Error State -->
-      <div v-if="error" class="bg-red-900 border border-red-700 rounded-lg p-4 mb-6">
-        <p class="text-red-300">{{ error }}</p>
-        <button @click="fetchSatellites" class="mt-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition-colors">
-          Retry
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
         </button>
-      </div>
 
-      <!-- Results Section -->
-      <div v-if="!loading && !error" class="bg-gray-800 rounded-lg overflow-hidden">
-        <!-- Table Header -->
-        <div class="bg-gray-700 px-4 py-3 grid grid-cols-12 gap-4 font-semibold text-sm">
-          <div class="col-span-1">
+        <!-- Mobile Filters Dropdown -->
+        <div v-if="showMobileFilters" class="mt-3 space-y-3 pb-3 border-b border-gray-700">
+          <!-- Object Type Pills -->
+          <div class="space-y-2">
+            <label class="text-xs text-gray-400 font-medium">OBJECT TYPES</label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="type in objectTypeOptions.slice(0, 6)"
+                :key="type.key"
+                @click="toggleObjectType(type.key)"
+                :class="[
+                  'flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition',
+                  selectedObjectTypes.includes(type.key) || type.key === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300'
+                ]"
+              >
+                <span class="mr-1">{{ type.label }}</span>
+                <span class="bg-black bg-opacity-30 px-1.5 py-0.5 rounded-full text-xs">
+                  {{ type.count }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mobile Filter Selects -->
+          <div class="grid grid-cols-2 gap-2">
+            <select
+              v-model="selectedConstellation"
+              class="px-3 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 text-sm"
+            >
+              <option value="">Constellation</option>
+              <option v-for="constellation in constellationOptions" :key="constellation" :value="constellation">
+                {{ constellation }}
+              </option>
+            </select>
+            
+            <select
+              v-model="selectedCountry"
+              class="px-3 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 text-sm"
+            >
+              <option value="">Country</option>
+              <option v-for="country in countryOptions" :key="country" :value="country">
+                {{ country }}
+              </option>
+            </select>
+
+            <select
+              v-model="selectedPurpose"
+              class="px-3 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 text-sm"
+            >
+              <option value="">Purpose</option>
+              <option v-for="purpose in purposeOptions" :key="purpose" :value="purpose">
+                {{ purpose }}
+              </option>
+            </select>
+
+            <select
+              v-model="selectedRegime"
+              class="px-3 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 text-sm"
+            >
+              <option value="">Regime</option>
+              <option v-for="regime in regimeOptions" :key="regime" :value="regime">
+                {{ regime }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Mobile Select All -->
+        <div class="flex items-center justify-between mt-3">
+          <label class="flex items-center space-x-2">
             <input
               type="checkbox"
               :checked="allFilteredSelected"
               @change="toggleSelectAll"
-              class="rounded"
+              class="rounded bg-gray-700 border-gray-600"
+            />
+            <span class="text-sm">Select all</span>
+          </label>
+          <span class="text-sm text-gray-400">{{ filteredSatellites.length }} objects</span>
+        </div>
+      </div>
+
+      <!-- Mobile Loading/Error States -->
+      <div v-if="loading" class="flex justify-center items-center py-12">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span class="ml-3">Loading...</span>
+      </div>
+      <div v-if="error" class="p-4">
+        <div class="bg-red-900 border border-red-700 rounded-lg p-4 text-center">
+          <p class="text-red-300 mb-2">{{ error }}</p>
+          <button
+            @click="fetchSatellites"
+            class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition-colors text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Satellite Cards -->
+      <div v-if="!loading && !error" class="p-4 space-y-3 pb-20">
+        <div
+          v-for="item in visibleMobileItems"
+          :key="item.noradCatId"
+          class="bg-gray-800 rounded-lg p-4 border border-gray-700"
+        >
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center space-x-2 mb-1">
+                <span class="text-blue-400 font-medium text-sm">{{ item.noradCatId }}</span>
+                <span class="w-2 h-2 rounded-full" :class="getRegimeColor(item.orbitCode)"></span>
+              </div>
+              <h3 class="font-medium text-white text-sm leading-tight">{{ item.name }}</h3>
+            </div>
+            <input
+              type="checkbox"
+              :checked="isSelected(item)"
+              @change="toggleSelection(item)"
+              class="rounded bg-gray-700 border-gray-600 ml-3 mt-1"
             />
           </div>
-          <div class="col-span-3 cursor-pointer hover:text-blue-400" @click="sortBy('name')">
-            Name {{ getSortIcon('name') }}
-          </div>
-          <div class="col-span-2 cursor-pointer hover:text-blue-400" @click="sortBy('noradCatId')">
-            NORAD ID {{ getSortIcon('noradCatId') }}
-          </div>
-          <div class="col-span-2">Orbit Code</div>
-          <div class="col-span-2">Object Type</div>
-          <div class="col-span-1 cursor-pointer hover:text-blue-400" @click="sortBy('countryCode')">
-            Country {{ getSortIcon('countryCode') }}
-          </div>
-          <div class="col-span-1 cursor-pointer hover:text-blue-400" @click="sortBy('launchDate')">
-            Launch {{ getSortIcon('launchDate') }}
+          
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span class="text-gray-400">COSPAR:</span>
+              <span class="ml-1 text-gray-300">{{ item.intlDes || 'N/A' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-400">Country:</span>
+              <span class="ml-1 text-gray-300">{{ item.countryCode || 'N/A' }}</span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-gray-400">Regime:</span>
+              <span class="ml-1 px-2 py-0.5 bg-gray-700 rounded text-xs">
+                {{ getRegimeDisplay(item.orbitCode) }}
+              </span>
+            </div>
           </div>
         </div>
 
-        <!-- Virtualized List -->
-        <div class="h-96 overflow-auto" ref="scrollContainer" @scroll="handleScroll">
-          <div :style="{ height: totalHeight + 'px', position: 'relative' }">
-            <div
-              v-for="(item, index) in visibleItems"
-              :key="item.noradCatId"
-              :style="{ 
-                position: 'absolute',
-                top: (startIndex + index) * itemHeight + 'px',
-                width: '100%',
-                height: itemHeight + 'px'
-              }"
-              class="px-4 py-2 border-b border-gray-700 hover:bg-gray-700 transition-colors grid grid-cols-12 gap-4 items-center text-sm"
+        <!-- Mobile Load More -->
+        <div v-if="hasMoreMobileItems" class="text-center py-4">
+          <button
+            @click="loadMoreMobileItems"
+            class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-lg transition-colors text-sm"
+          >
+            Load More
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Selected Panel (Slide-up) -->
+      <div
+        v-if="showMobilePanel"
+        class="fixed inset-0 bg-black bg-opacity-50 z-30"
+        @click="showMobilePanel = false"
+      >
+        <div
+          class="fixed bottom-0 left-0 right-0 bg-gray-800 rounded-t-xl max-h-[70vh] flex flex-col"
+          @click.stop
+        >
+          <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Selected Assets</h3>
+            <button
+              @click="showMobilePanel = false"
+              class="text-gray-400 hover:text-white"
             >
-              <div class="col-span-1">
-                <input
-                  type="checkbox"
-                  :checked="isSelected(item)"
-                  @change="toggleSelection(item)"
-                  class="rounded"
-                />
+              ✕
+            </button>
+          </div>
+          
+          <div class="flex-1 overflow-auto p-4">
+            <div v-if="selectedSatellites.length === 0" class="text-center text-gray-500 py-8">
+              No assets selected
+            </div>
+            <div v-else class="space-y-2">
+              <div
+                v-for="satellite in selectedSatellites"
+                :key="satellite.noradCatId"
+                class="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
+              >
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-blue-400">{{ satellite.noradCatId }}</div>
+                  <div class="text-xs text-gray-400 truncate">{{ satellite.name }}</div>
+                </div>
+                <button
+                  @click="removeSatellite(satellite)"
+                  class="text-gray-400 hover:text-red-400 ml-2"
+                >
+                  ✕
+                </button>
               </div>
-              <div class="col-span-3 font-medium truncate" :title="item.name">
-                {{ item.name }}
+            </div>
+          </div>
+
+          <div class="p-4 border-t border-gray-700">
+            <button
+              @click="proceed"
+              :disabled="selectedSatellites.length === 0"
+              class="w-full bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-3 rounded-lg transition-colors font-medium"
+            >
+              PROCEED ({{ selectedSatellites.length }})
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Floating Action Button -->
+      <div v-if="selectedSatellites.length > 0" class="fixed bottom-4 right-4 z-20">
+        <button
+          @click="proceed"
+          class="bg-cyan-500 hover:bg-cyan-600 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors"
+        >
+          <svg class="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Desktop Layout (unchanged) -->
+    <div class="hidden lg:flex h-screen">
+      <!-- Main Content Area -->
+      <div class="flex-1 flex flex-col">
+        <!-- Header -->
+        <div class="bg-gray-800 p-6 border-b border-gray-700">
+          <h1 class="text-2xl font-bold mb-4">Create My Asset list</h1>
+          
+          <!-- Filter Pills -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button
+              v-for="type in objectTypeOptions"
+              :key="type.key"
+              @click="toggleObjectType(type.key)"
+              :class="[
+                'flex items-center px-4 py-2 rounded-full text-sm font-medium transition',
+                selectedObjectTypes.includes(type.key)
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ]"
+            >
+              <span class="mr-2">{{ type.label }}</span>
+              <span class="bg-black bg-opacity-30 px-2 py-0.5 rounded-full text-xs">
+                {{ type.count }}
+              </span>
+            </button>
+          </div>
+
+          <!-- Search and Filters Row -->
+          <div class="flex gap-4 items-center">
+            <div class="flex-1 relative">
+              <input
+                v-model="searchInput"
+                @keyup.enter="handleSearch"
+                type="text"
+                placeholder="Search by Name/ NORAD ID"
+                class="w-full px-4 py-2 pl-10 rounded-lg bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+              />
+              <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </div>
+            
+            <select
+              v-model="selectedConstellation"
+              class="px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Constellation</option>
+              <option v-for="constellation in constellationOptions" :key="constellation" :value="constellation">
+                {{ constellation }}
+              </option>
+            </select>
+            
+            <select
+              v-model="selectedCountry"
+              class="px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Country</option>
+              <option v-for="country in countryOptions" :key="country" :value="country">
+                {{ country }}
+              </option>
+            </select>
+
+            <select
+              v-model="selectedPurpose"
+              class="px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Purpose</option>
+              <option v-for="purpose in purposeOptions" :key="purpose" :value="purpose">
+                {{ purpose }}
+              </option>
+            </select>
+
+            <select
+              v-model="selectedRegime"
+              class="px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Regime</option>
+              <option v-for="regime in regimeOptions" :key="regime" :value="regime">
+                {{ regime }}
+              </option>
+            </select>
+
+            <button class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Select All and Object Count -->
+          <div class="flex items-center justify-between mt-4">
+            <label class="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                :checked="allFilteredSelected"
+                @change="toggleSelectAll"
+                class="rounded bg-gray-700 border-gray-600"
+              />
+              <span class="text-sm">Select all</span>
+            </label>
+            <span class="text-sm text-gray-400">{{ filteredSatellites.length }} objects</span>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="flex-1 flex justify-center items-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <span class="ml-3 text-lg">Loading satellites...</span>
+        </div>
+
+        <!-- Error State -->
+        <div v-if="error" class="flex-1 flex justify-center items-center">
+          <div class="bg-red-900 border border-red-700 rounded-lg p-4">
+            <p class="text-red-300">{{ error }}</p>
+            <button
+              @click="fetchSatellites"
+              class="mt-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+
+        <!-- Satellite Table -->
+        <div v-if="!loading && !error" class="flex-1 overflow-hidden">
+          <!-- Table Header -->
+          <div class="bg-gray-800 px-6 py-3 border-b border-gray-700">
+            <div class="grid grid-cols-12 gap-4 font-semibold text-sm text-gray-300">
+              <div class="col-span-1"></div>
+              <div class="col-span-1 cursor-pointer hover:text-blue-400" @click="sortBy('noradCatId')">
+                NORAD ID {{ getSortIcon('noradCatId') }}
               </div>
-              <div class="col-span-2 text-blue-400">{{ item.noradCatId }}</div>
-              <div class="col-span-2">
-                <span class="px-2 py-1 bg-gray-600 rounded text-xs">
-                  {{ item.orbitCode || 'N/A' }}
-                </span>
+              <div class="col-span-3 cursor-pointer hover:text-blue-400" @click="sortBy('name')">
+                Name {{ getSortIcon('name') }}
               </div>
-              <div class="col-span-2">
-                <span :class="getObjectTypeColor(item.objectType)" class="px-2 py-1 rounded text-xs">
-                  {{ item.objectType }}
-                </span>
+              <div class="col-span-2">COSPAR ID</div>
+              <div class="col-span-2">Regime</div>
+              <div class="col-span-2">Country</div>
+              <div class="col-span-1"></div>
+            </div>
+          </div>
+
+          <!-- Virtualized List -->
+          <div class="flex-1 overflow-auto h-[65vh]" ref="scrollContainer" @scroll="handleScroll">
+            <div :style="{ height: totalHeight + 'px', position: 'relative' }">
+              <div
+                v-for="(item, index) in visibleItems"
+                :key="item.noradCatId"
+                :style="{
+                  position: 'absolute',
+                  top: (startIndex + index) * itemHeight + 'px',
+                  width: '100%',
+                  height: itemHeight + 'px',
+                }"
+                class="px-6 py-3 border-b border-gray-700 hover:bg-gray-800 transition-colors"
+              >
+                <div class="grid grid-cols-12 gap-4 items-center text-sm">
+                  <div class="col-span-1">
+                    <input
+                      type="checkbox"
+                      :checked="selectedSatellites.some((s) => s.noradCatId === item.noradCatId)"
+                      @change="toggleSelection(item)"
+                      :disabled="selectedSatellites.length >= 10 && !isSelected(item)"
+                      class="rounded bg-gray-700 border-gray-600"
+                    />
+                  </div>
+                  <div class="col-span-1 text-blue-400 font-medium">
+                    {{ item.noradCatId }}
+                  </div>
+                  <div class="col-span-3 font-medium truncate" :title="item.name">
+                    {{ item.name }}
+                  </div>
+                  <div class="col-span-2 text-gray-400">
+                    {{ item.intlDes || 'N/A' }}
+                  </div>
+                  <div class="col-span-2">
+                    <div class="flex items-center">
+                      <span class="px-2 py-1 bg-gray-700 rounded text-xs mr-2">
+                        {{ getRegimeDisplay(item.orbitCode) }}
+                      </span>
+                      <span class="w-2 h-2 rounded-full" :class="getRegimeColor(item.orbitCode)"></span>
+                    </div>
+                  </div>
+                  <div class="col-span-2 text-gray-400">
+                    {{ item.countryCode || 'N/A' }}
+                  </div>
+                  <div class="col-span-1">
+                    <span class="text-gray-400" :class="getObjectTypeIcon(item.objectType)">
+                      {{ getObjectTypeIcon(item.objectType) }}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div class="col-span-1">{{ item.countryCode || 'N/A' }}</div>
-              <div class="col-span-1 text-xs">{{ formatDate(item.launchDate) }}</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Selection Summary and Proceed -->
-      <div v-if="!loading && !error" class="mt-6 bg-gray-800 rounded-lg p-4">
-        <div class="flex justify-between items-center">
-          <div class="flex items-center space-x-4">
-            <span class="text-lg font-semibold">
-              Selected: {{ selectedSatellites.length }} / 10
-            </span>
-            <div v-if="selectionError" class="text-red-400 text-sm">
-              {{ selectionError }}
-            </div>
-          </div>
-          <div class="flex gap-4">
+      <!-- Selected Assets Panel -->
+      <div class="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
+        <div class="p-4 border-b border-gray-700">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold">Selected Assets</h2>
             <button
               @click="clearSelection"
-              :disabled="selectedSatellites.length === 0"
-              class="bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg transition-colors"
+              class="text-gray-400 hover:text-white text-sm"
             >
-              Clear Selection
+              Clear all ✕
             </button>
-            <button
-              @click="proceed"
-              :disabled="selectedSatellites.length === 0"
-              class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg transition-colors"
+          </div>
+          <p class="text-sm text-blue-400 mt-1">{{ selectedSatellites.length }} objects selected</p>
+        </div>
+
+        <div class="flex-1 overflow-auto p-4">
+          <div v-if="selectedSatellites.length === 0" class="text-center text-gray-500 mt-8">
+            No assets selected
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="satellite in selectedSatellites"
+              :key="satellite.noradCatId"
+              class="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
             >
-              Proceed with Selection
-            </button>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center space-x-2">
+                  <span class="text-sm font-medium text-blue-400">{{ satellite.noradCatId }}</span>
+                  <span class="text-xs text-gray-400">{{ satellite.name }}</span>
+                </div>
+              </div>
+              <button
+                @click="removeSatellite(satellite)"
+                class="text-gray-400 hover:text-red-400 ml-2"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Proceed Button -->
+        <div class="p-4 border-t border-gray-700">
+          <button
+            @click="proceed"
+            :disabled="selectedSatellites.length === 0"
+            class="w-full bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-3 rounded-lg transition-colors font-medium"
+          >
+            PROCEED
+          </button>
+          <div v-if="selectionError" class="text-red-400 text-sm mt-2 text-center">
+            {{ selectionError }}
           </div>
         </div>
       </div>
@@ -202,333 +532,358 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { useRouter } from "vue-router";
 // Import the API utilities instead of direct axios
-import { satelliteApi, storage, formatters, debounce } from '../utils/api.ts'
+import { satelliteApi, storage, formatters, debounce } from "../utils/api.ts";
 
 // Types
 interface Satellite {
-  noradCatId: string
-  intlDes: string
-  name: string
-  launchDate: string | null
-  decayDate: string | null
-  objectType: string
-  launchSiteCode: string
-  countryCode: string
-  orbitCode: string
+  noradCatId: string;
+  intlDes: string;
+  name: string;
+  launchDate: string | null;
+  decayDate: string | null;
+  objectType: string;
+  launchSiteCode: string;
+  countryCode: string;
+  orbitCode: string;
 }
 
 // Router
-const router = useRouter()
+const router = useRouter();
 
 // Reactive state
-const satellites = ref<Satellite[]>([])
-const filteredSatellites = ref<Satellite[]>([])
-const selectedSatellites = ref<Satellite[]>([])
-const loading = ref(false)
-const error = ref('')
-const selectionError = ref('')
+const satellites = ref<Satellite[]>([]);
+const filteredSatellites = ref<Satellite[]>([]);
+const selectedSatellites = ref<Satellite[]>([]);
+const loading = ref(false);
+const error = ref("");
+const selectionError = ref("");
 
 // Search and filters
-const searchInput = ref('')
-const currentSearch = ref('')
-const selectedObjectTypes = ref<string[]>([])
-const selectedOrbitCodes = ref<string[]>([])
+const searchInput = ref("");
+const currentSearch = ref("");
+const selectedObjectTypes = ref<string[]>(['all']);
+const selectedConstellation = ref("");
+const selectedCountry = ref("");
+const selectedPurpose = ref("");
+const selectedRegime = ref("");
 
 // Sorting
-const sortField = ref<keyof Satellite>('name')
-const sortDirection = ref<'asc' | 'desc'>('asc')
+const sortField = ref<keyof Satellite>("name");
+const sortDirection = ref<"asc" | "desc">("asc");
 
 // Virtualization
-const scrollContainer = ref<HTMLElement>()
-const itemHeight = 50
-const visibleCount = ref(10)
-const scrollTop = ref(0)
-
-// Filter options
-const objectTypeOptions = ['ROCKET BODY', 'DEBRIS', 'UNKNOWN', 'PAYLOAD']
-const orbitCodeOptions = [
-  'LEO', 'LEO1', 'LEO2', 'LEO3', 'LEO4', 'MEO', 'GEO', 'HEO', 'IGO', 'EGO',
-  'NSO', 'GTO', 'GHO', 'HAO', 'MGO', 'LMO', 'UFO', 'ESO', 'UNKNOWN'
-]
+const scrollContainer = ref<HTMLElement>();
+const itemHeight = 60;
+const visibleCount = ref(10);
+const scrollTop = ref(0);
 
 // API counts
-const apiCounts = ref<Record<string, number>>({})
+const apiCounts = ref<Record<string, number>>({});
+
+// Filter options
+const objectTypeOptions = computed(() => [
+  { key: 'all', label: 'All Objects', count: satellites.value.length },
+  { key: 'PAYLOAD', label: 'Payloads', count: apiCounts.value['PAYLOAD'] || 0 },
+  { key: 'DEBRIS', label: 'Debris', count: apiCounts.value['DEBRIS'] || 0 },
+  { key: 'ROCKET BODY', label: 'Rocket Bodies', count: apiCounts.value['ROCKET BODY'] || 0 },
+  { key: 'UNKNOWN', label: 'Unknown', count: apiCounts.value['UNKNOWN'] || 0 }
+]);
+
+const constellationOptions = ref(['Starlink', 'OneWeb', 'Iridium', 'GPS']);
+const countryOptions = ref(['US', 'RU', 'CN', 'IN', 'FR', 'DE', 'JP']);
+const purposeOptions = ref(['Communications', 'Earth Observation', 'Navigation', 'Scientific']);
+const regimeOptions = ref(['LEO', 'MEO', 'GEO', 'HEO']);
 
 // Computed properties
-const totalHeight = computed(() => filteredSatellites.value.length * itemHeight)
-const startIndex = computed(() => Math.floor(scrollTop.value / itemHeight))
-const endIndex = computed(() => Math.min(startIndex.value + visibleCount.value, filteredSatellites.value.length))
-const visibleItems = computed(() => filteredSatellites.value.slice(startIndex.value, endIndex.value))
+const totalHeight = computed(() => filteredSatellites.value.length * itemHeight);
+const startIndex = computed(() => Math.floor(scrollTop.value / itemHeight));
+const endIndex = computed(() =>
+  Math.min(startIndex.value + visibleCount.value, filteredSatellites.value.length)
+);
+const visibleItems = computed(() =>
+  filteredSatellites.value.slice(startIndex.value, endIndex.value)
+);
 
 const allFilteredSelected = computed(() => {
-  const visibleIds = visibleItems.value.map(item => item.noradCatId)
-  return visibleIds.length > 0 && visibleIds.every(id => 
-    selectedSatellites.value.some(selected => selected.noradCatId === id)
-  )
-})
+  const visibleIds = visibleItems.value.map((item) => item.noradCatId);
+  return (
+    visibleIds.length > 0 &&
+    visibleIds.every((id) =>
+      selectedSatellites.value.some((selected) => selected.noradCatId === id)
+    )
+  );
+});
 
-// Methods - Now using the centralized API
+// Methods
 const fetchSatellites = async () => {
-  loading.value = true
-  error.value = ''
-  
-  try {
-    // Use the centralized API method
-    const response = await satelliteApi.getSatellites({
-      objectTypes: selectedObjectTypes.value.length > 0 ? selectedObjectTypes.value : undefined,
-      attributes: ['noradCatId', 'intlDes', 'name', 'launchDate', 'objectType', 'countryCode', 'orbitCode']
-    })
-    
-    satellites.value = response.data || []
-    
-    // Get counts manually since API doesn't provide them
-    await updateCounts()
-    
-    applyFiltersAndSearch()
-  } catch (err: any) {
-    error.value = err.message || 'Failed to fetch satellites'
-    satellites.value = []
-    apiCounts.value = {
-      'ROCKET BODY': 0,
-      'DEBRIS': 0,
-      'UNKNOWN': 0,
-      'PAYLOAD': 0,
-    }
-  } finally {
-    loading.value = false
-  }
-}
+  loading.value = true;
+  error.value = "";
 
-// Update counts manually from the data
+  try {
+    const response = await satelliteApi.getSatellites({
+      objectTypes: selectedObjectTypes.value.length > 0 && selectedObjectTypes.value[0] != 'all' ? selectedObjectTypes.value : undefined,
+      attributes: [
+        "noradCatId",
+        "intlDes",
+        "name",
+        "launchDate",
+        "objectType",
+        "countryCode",
+        "orbitCode",
+      ],
+    });
+
+    satellites.value = response.data || [];
+    await updateCounts();
+    applyFiltersAndSearch();
+  } catch (err: any) {
+    error.value = err.message || "Failed to fetch satellites";
+    satellites.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+const toggleObjectType = (type: string) => {
+  debugger
+  if (type === 'all') {
+    selectedObjectTypes.value = [];
+  } else {
+    // remove 'all' if present
+    if (selectedObjectTypes.value.includes('all')) {
+      selectedObjectTypes.value = [];
+    }
+    const index = selectedObjectTypes.value.indexOf(type);
+    if (index > -1) {
+      selectedObjectTypes.value.splice(index, 1);
+    } else {
+      selectedObjectTypes.value.push(type);
+    }
+  }
+  applyFilters();
+};
+
 const updateCounts = async () => {
   try {
-    const counts = await satelliteApi.getSatelliteCounts()
-    apiCounts.value = counts
+    const counts = await satelliteApi.getSatelliteCounts();
+    apiCounts.value = counts;
   } catch (err) {
-    console.error('Failed to get satellite counts:', err)
-    // Fallback: count from loaded data
+    console.error("Failed to get satellite counts:", err);
     const fallbackCounts: Record<string, number> = {
-      'ROCKET BODY': 0,
-      'DEBRIS': 0,
-      'UNKNOWN': 0,
-      'PAYLOAD': 0,
-    }
-    
-    satellites.value.forEach(satellite => {
+      "ROCKET BODY": 0,
+      DEBRIS: 0,
+      UNKNOWN: 0,
+      PAYLOAD: 0,
+    };
+
+    satellites.value.forEach((satellite) => {
       if (fallbackCounts.hasOwnProperty(satellite.objectType)) {
-        fallbackCounts[satellite.objectType]++
+        fallbackCounts[satellite.objectType]++;
       }
-    })
-    
-    apiCounts.value = fallbackCounts
+    });
+
+    apiCounts.value = fallbackCounts;
   }
-}
+};
 
 const applyFiltersAndSearch = () => {
-  let filtered = [...satellites.value]
-  
+  let filtered = [...satellites.value];
+  debugger
   // Apply search
   if (currentSearch.value) {
-    const searchLower = currentSearch.value.toLowerCase()
-    filtered = filtered.filter(sat =>
-      sat.name.toLowerCase().includes(searchLower) ||
-      sat.noradCatId.toLowerCase().includes(searchLower)
-    )
+    const searchLower = currentSearch.value.toLowerCase();
+    filtered = filtered.filter(
+      (sat) =>
+        sat.name.toLowerCase().includes(searchLower) ||
+        sat.noradCatId.toLowerCase().includes(searchLower)
+    );
   }
-  
-  // Apply orbit code filter
-  if (selectedOrbitCodes.value.length > 0) {
-    filtered = filtered.filter(sat =>
-      selectedOrbitCodes.value.includes(sat.orbitCode)
-    )
+
+  // Apply filters
+  if (selectedCountry.value) {
+    filtered = filtered.filter((sat) => sat.countryCode === selectedCountry.value);
   }
-  
+
+  if (selectedRegime.value) {
+    filtered = filtered.filter((sat) => sat.orbitCode?.includes(selectedRegime.value));
+  }
+  selectedObjectTypes.value.forEach((type) => {
+    if (type !== 'all') {
+      filtered = filtered.filter((sat) => sat.objectType === type);
+    }
+  });
+
   // Apply sorting
   filtered.sort((a, b) => {
-    const aVal = a[sortField.value] || ''
-    const bVal = b[sortField.value] || ''
-    
-    if (sortField.value === 'launchDate') {
-      const aDate = new Date(aVal as string).getTime() || 0
-      const bDate = new Date(bVal as string).getTime() || 0
-      return sortDirection.value === 'asc' ? aDate - bDate : bDate - aDate
-    }
-    
-    const comparison = String(aVal).localeCompare(String(bVal))
-    return sortDirection.value === 'asc' ? comparison : -comparison
-  })
-  
-  filteredSatellites.value = filtered
-  scrollTop.value = 0
-}
+    const aVal = a[sortField.value] || "";
+    const bVal = b[sortField.value] || "";
 
-// Debounced search handler
+    if (sortField.value === "launchDate") {
+      const aDate = new Date(aVal as string).getTime() || 0;
+      const bDate = new Date(bVal as string).getTime() || 0;
+      return sortDirection.value === "asc" ? aDate - bDate : bDate - aDate;
+    }
+
+    const comparison = String(aVal).localeCompare(String(bVal));
+    return sortDirection.value === "asc" ? comparison : -comparison;
+  });
+
+  filteredSatellites.value = filtered;
+  scrollTop.value = 0;
+};
+
 const debouncedSearch = debounce(() => {
-  currentSearch.value = searchInput.value
-  applyFiltersAndSearch()
-}, 300)
+  currentSearch.value = searchInput.value;
+  applyFiltersAndSearch();
+}, 300);
 
 const handleSearch = () => {
-  currentSearch.value = searchInput.value
-  applyFiltersAndSearch()
-}
-
-const clearSearch = () => {
-  searchInput.value = ''
-  currentSearch.value = ''
-  applyFiltersAndSearch()
-}
+  currentSearch.value = searchInput.value;
+  applyFiltersAndSearch();
+};
 
 const applyFilters = () => {
-  fetchSatellites()
-}
-
-const clearFilters = () => {
-  selectedObjectTypes.value = []
-  selectedOrbitCodes.value = []
-  fetchSatellites()
-}
+  // fetchSatellites();
+  applyFiltersAndSearch();
+};
 
 const sortBy = (field: keyof Satellite) => {
   if (sortField.value === field) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+    sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
   } else {
-    sortField.value = field
-    sortDirection.value = 'asc'
+    sortField.value = field;
+    sortDirection.value = "asc";
   }
-  applyFiltersAndSearch()
-}
+  applyFiltersAndSearch();
+};
 
 const getSortIcon = (field: keyof Satellite) => {
-  if (sortField.value !== field) return '↕️'
-  return sortDirection.value === 'asc' ? '↑' : '↓'
-}
+  if (sortField.value !== field) return "↕️";
+  return sortDirection.value === "asc" ? "↑" : "↓";
+};
 
 const toggleSelection = (item: Satellite) => {
-  const index = selectedSatellites.value.findIndex(s => s.noradCatId === item.noradCatId)
-  
+  const index = selectedSatellites.value.findIndex(
+    (s) => s.noradCatId === item.noradCatId
+  );
+
   if (index >= 0) {
-    selectedSatellites.value.splice(index, 1)
-    selectionError.value = ''
+    selectedSatellites.value.splice(index, 1);
+    selectionError.value = "";
   } else {
     if (selectedSatellites.value.length >= 10) {
-      selectionError.value = 'Maximum 10 satellites can be selected'
-      setTimeout(() => selectionError.value = '', 3000)
-      return
+      selectionError.value = "Maximum 10 satellites can be selected";
+      setTimeout(() => (selectionError.value = ""), 3000);
+      return;
     }
-    selectedSatellites.value.push(item)
-    selectionError.value = ''
+    selectedSatellites.value.push(item);
+    selectionError.value = "";
   }
-  
-  // Save selection using storage utility
-  storage.set('selectedSatellites', selectedSatellites.value)
-}
+
+  storage.set("selectedSatellites", selectedSatellites.value);
+};
 
 const toggleSelectAll = () => {
-  const visibleIds = visibleItems.value.map(item => item.noradCatId)
-  const allSelected = visibleIds.every(id => 
-    selectedSatellites.value.some(selected => selected.noradCatId === id)
-  )
-  
+  const visibleIds = filteredSatellites.value.map((item) => item.noradCatId);
+  const allSelected = visibleIds.every((id) =>
+    selectedSatellites.value.some((selected) => selected.noradCatId === id)
+  );
+
   if (allSelected) {
-    // Deselect all visible
-    selectedSatellites.value = selectedSatellites.value.filter(selected =>
-      !visibleIds.includes(selected.noradCatId)
-    )
+    selectedSatellites.value = selectedSatellites.value.filter(
+      (selected) => !visibleIds.includes(selected.noradCatId)
+    );
   } else {
-    // Select all visible (up to limit)
-    visibleItems.value.forEach(item => {
-      if (selectedSatellites.value.length < 10 && !isSelected(item)) {
-        selectedSatellites.value.push(item)
+    filteredSatellites.value.forEach((item) => {
+      if (selectedSatellites.value.length <= 10 && !isSelected(item)) {
+        selectedSatellites.value.push(item);
       }
-    })
+    });
   }
-  
-  // Save selection using storage utility
-  storage.set('selectedSatellites', selectedSatellites.value)
-}
+
+  storage.set("selectedSatellites", selectedSatellites.value);
+};
 
 const isSelected = (item: Satellite) => {
-  return selectedSatellites.value.some(s => s.noradCatId === item.noradCatId)
-}
+  debugger
+  return selectedSatellites.value.some((s) => s.noradCatId === item.noradCatId);
+};
 
 const clearSelection = () => {
-  selectedSatellites.value = []
-  selectionError.value = ''
-  // Clear from storage using utility
-  storage.remove('selectedSatellites')
-}
+  selectedSatellites.value = [];
+  selectionError.value = "";
+  storage.remove("selectedSatellites");
+};
+
+const removeSatellite = (satellite: Satellite) => {
+  const index = selectedSatellites.value.findIndex(
+    (s) => s.noradCatId === satellite.noradCatId
+  );
+  if (index >= 0) {
+    selectedSatellites.value.splice(index, 1);
+    storage.set("selectedSatellites", selectedSatellites.value);
+  }
+};
 
 const proceed = () => {
-  if (selectedSatellites.value.length === 0) return
-  
-  // Save using storage utility
-  storage.set('selectedSatellites', selectedSatellites.value)
-  router.push('/selected')
-}
+  if (selectedSatellites.value.length === 0) return;
+  storage.set("selectedSatellites", selectedSatellites.value);
+  router.push("/selected");
+};
 
-const getTypeCount = (type: string) => {
-  return apiCounts.value[type] || 0
-}
+const getRegimeDisplay = (orbitCode: string) => {
+  return orbitCode || 'N/A';
+};
 
-const getOrbitCount = (code: string) => {
-  return satellites.value.filter(sat => sat.orbitCode === code).length
-}
-
-const getObjectTypeColor = (type: string) => {
+const getRegimeColor = (orbitCode: string) => {
   const colors = {
-    'PAYLOAD': 'bg-green-600',
-    'ROCKET BODY': 'bg-blue-600',
-    'DEBRIS': 'bg-red-600',
-    'UNKNOWN': 'bg-gray-600'
-  }
-  return colors[type as keyof typeof colors] || 'bg-gray-600'
-}
+    'LEO': 'bg-blue-500',
+    'MEO': 'bg-green-500',
+    'GEO': 'bg-yellow-500',
+    'HEO': 'bg-purple-500'
+  };
+  return colors[orbitCode as keyof typeof colors] || 'bg-gray-500';
+};
 
-// Use the formatter utility
-const formatDate = (date: string | null) => {
-  return formatters.date(date)
-}
+const getObjectTypeIcon = (type: string) => {
+  const icons = {
+    'PAYLOAD': '●',
+    'ROCKET BODY': '▲',
+    'DEBRIS': '◆',
+    'UNKNOWN': '◯'
+  };
+  return icons[type as keyof typeof icons] || '◯';
+};
 
-// Handle scroll for virtualization
 const handleScroll = () => {
   if (scrollContainer.value) {
-    scrollTop.value = scrollContainer.value.scrollTop
+    scrollTop.value = scrollContainer.value.scrollTop;
   }
-}
+};
 
-// Watchers and lifecycle
-watch([selectedObjectTypes, selectedOrbitCodes], () => {
-  // Update counts when filters change
-  nextTick(() => {
-    orbitCodeOptions.forEach(code => {
-      getOrbitCount(code)
-    })
-  })
-})
-
-// Add debounced search on input change
 watch(searchInput, () => {
-  debouncedSearch()
-})
+  debouncedSearch();
+});
+
+watch([selectedConstellation, selectedCountry, selectedPurpose, selectedRegime], () => {
+  applyFiltersAndSearch();
+});
 
 onMounted(() => {
-  fetchSatellites()
-  
-  // Load persisted selection using storage utility
-  const saved = storage.get<Satellite[]>('selectedSatellites')
+  fetchSatellites();
+
+  const saved = storage.get<Satellite[]>("selectedSatellites");
   if (saved) {
-    selectedSatellites.value = saved
+    selectedSatellites.value = saved;
   }
-  
-  // Set up virtualization
+
   if (scrollContainer.value) {
-    const containerHeight = scrollContainer.value.clientHeight
-    visibleCount.value = Math.ceil(containerHeight / itemHeight) + 5
-    scrollContainer.value.addEventListener('scroll', handleScroll)
+    const containerHeight = scrollContainer.value.clientHeight;
+    visibleCount.value = Math.ceil(containerHeight / itemHeight) + 15;
+    scrollContainer.value.addEventListener("scroll", handleScroll);
   }
-})
+});
 </script>

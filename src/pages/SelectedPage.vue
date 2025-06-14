@@ -40,7 +40,7 @@
           <div class="flex justify-between items-center">
             <div class="flex items-center space-x-4">
               <span class="text-lg font-semibold">
-                Total Selected: {{ selectedItems.length }} / 10
+                Total Selected: {{ selectedItems.length }}
               </span>
               <div class="flex space-x-2">
                 <span 
