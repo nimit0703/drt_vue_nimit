@@ -533,10 +533,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 // Import the API utilities instead of direct axios
-import { satelliteApi, storage, formatters, debounce } from "../utils/api.ts";
+import { satelliteApi, storage, debounce } from "../utils/api.ts";
 
 import FilterModal from '../components/FilterModal.vue'
 import type { Satellite } from "../types/satellite.ts";
