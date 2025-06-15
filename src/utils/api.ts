@@ -5,7 +5,7 @@ import type { ApiResponse, ApiError } from '../types/satellite'
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: 'https://backend.digantara.dev/v1',
-  timeout: 30000, // 30 seconds timeout
+  timeout: 60000 *5 , // 60 seconds timeout
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -99,7 +99,6 @@ export const satelliteApi = {
         'UNKNOWN': 0,
         'PAYLOAD': 0,
       }
-      
       if (response.data.data && Array.isArray(response.data.data)) {
         response.data.data.forEach((satellite: any) => {
           const objectType = satellite.objectType
@@ -157,7 +156,6 @@ export const fetchSatellites = async (
       'UNKNOWN': 0,
       'PAYLOAD': 0,
     }
-    debugger
     satellites.value.forEach((satellite: any) => {
       const objectType = satellite.objectType
       if (counts.hasOwnProperty(objectType)) {

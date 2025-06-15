@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-900 text-white">
+  <div class="min-h-screen bg-gray-900 text-white ">
     <!-- Mobile Layout -->
     <div class="lg:hidden">
       <!-- Mobile Header -->
@@ -355,13 +355,20 @@
                 {{ regime }}
               </option>
             </select>
-
-            <button class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
-              </svg>
-            </button>
-          </div>
+              <button 
+                @click="openFilterModal"
+                class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+              >
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                </svg>
+              </button>
+            </div>
+            <FilterModal 
+              :is-open="showFilterModal" 
+              @close="closeFilterModal"
+              @apply="applyAdvancedFilters"
+            />
 
           <!-- Select All and Object Count -->
           <div class="flex items-center justify-between mt-4">
@@ -412,7 +419,6 @@
               <div class="col-span-2">COSPAR ID</div>
               <div class="col-span-2">Regime</div>
               <div class="col-span-2">Country</div>
-              <div class="col-span-1"></div>
             </div>
           </div>
 
@@ -440,7 +446,7 @@
                       class="rounded bg-gray-700 border-gray-600"
                     />
                   </div>
-                  <div class="col-span-1 text-blue-400 font-medium">
+                  <div class="col-span-1 text-blue-400 font-medium ml-4">
                     {{ item.noradCatId }}
                   </div>
                   <div class="col-span-3 font-medium truncate" :title="item.name">
@@ -457,13 +463,8 @@
                       <span class="w-2 h-2 rounded-full" :class="getRegimeColor(item.orbitCode)"></span>
                     </div>
                   </div>
-                  <div class="col-span-2 text-gray-400">
+                  <div class="col-span-2 text-gray-400 ml-5">
                     {{ item.countryCode || 'N/A' }}
-                  </div>
-                  <div class="col-span-1">
-                    <span class="text-gray-400" :class="getObjectTypeIcon(item.objectType)">
-                      {{ getObjectTypeIcon(item.objectType) }}
-                    </span>
                   </div>
                 </div>
               </div>
@@ -537,18 +538,8 @@ import { useRouter } from "vue-router";
 // Import the API utilities instead of direct axios
 import { satelliteApi, storage, formatters, debounce } from "../utils/api.ts";
 
-// Types
-interface Satellite {
-  noradCatId: string;
-  intlDes: string;
-  name: string;
-  launchDate: string | null;
-  decayDate: string | null;
-  objectType: string;
-  launchSiteCode: string;
-  countryCode: string;
-  orbitCode: string;
-}
+import FilterModal from '../components/FilterModal.vue'
+import type { Satellite } from "../types/satellite.ts";
 
 // Router
 const router = useRouter();
@@ -583,6 +574,37 @@ const scrollTop = ref(0);
 // API counts
 const apiCounts = ref<Record<string, number>>({});
 
+// Add these lines to your reactive state section (around line 20-30)
+const showMobilePanel = ref(false);
+const showMobileFilters = ref(false);
+
+// Also add these mobile-specific variables for the load more functionality
+const visibleMobileItems = ref([] as Satellite[]);
+const hasMoreMobileItems = ref(true);
+const mobileItemsPerPage = 20;
+const currentMobilePage = ref(1);
+
+// Add this method to handle loading more mobile items
+const loadMoreMobileItems = () => {
+  const startIndex = (currentMobilePage.value - 1) * mobileItemsPerPage;
+  const endIndex = startIndex + mobileItemsPerPage;
+  const newItems = filteredSatellites.value.slice(startIndex, endIndex);
+  
+  visibleMobileItems.value = [...visibleMobileItems.value, ...newItems];
+  currentMobilePage.value++;
+  
+  hasMoreMobileItems.value = endIndex < filteredSatellites.value.length;
+};
+
+// Update the applyFiltersAndSearch method to reset mobile items
+// Add this at the end of your existing applyFiltersAndSearch method:
+const resetMobileItems = () => {
+  currentMobilePage.value = 1;
+  visibleMobileItems.value = filteredSatellites.value.slice(0, mobileItemsPerPage);
+  hasMoreMobileItems.value = filteredSatellites.value.length > mobileItemsPerPage;
+};
+
+// Call resetMobileItems() at the end of applyFiltersAndSearch method
 // Filter options
 const objectTypeOptions = computed(() => [
   { key: 'all', label: 'All Objects', count: satellites.value.length },
@@ -592,8 +614,59 @@ const objectTypeOptions = computed(() => [
   { key: 'UNKNOWN', label: 'Unknown', count: apiCounts.value['UNKNOWN'] || 0 }
 ]);
 
+// 1. Import the FilterModal component at the top of your script section:
+
+// 2. Add these reactive variables to your existing state:
+const showFilterModal = ref(false)
+const advancedFilters = ref({
+  launchDateFrom: '',
+  launchDateTo: '',
+  minAltitude: null,
+  maxAltitude: null,
+  minInclination: null,
+  maxInclination: null,
+  launchSite: '',
+  operationalStatus: [],
+  minPeriod: null,
+  maxPeriod: null,
+  rcsSize: []
+})
+
+// 3. Add these methods:
+const openFilterModal = () => {
+  showFilterModal.value = true
+}
+
+const closeFilterModal = () => {
+  showFilterModal.value = false
+}
+
+const applyAdvancedFilters = (filters:any) => {
+  advancedFilters.value = { ...filters }
+  selectedCountry.value = filters.countryCode || '';
+  selectedRegime.value = filters.orbitCode || '';
+
+  selectedObjectTypes.value = filters.objectTypes
+
+  applyFiltersAndSearch()
+}
+
+
 const constellationOptions = ref(['Starlink', 'OneWeb', 'Iridium', 'GPS']);
-const countryOptions = ref(['US', 'RU', 'CN', 'IN', 'FR', 'DE', 'JP']);
+const countryOptions = ref([
+    "US", "CIS", "ESA", "PRC", "FR", "ORB", "TURK", "SES", "NZ", "AUS",
+    "TBD", "UK", "NOR", "CHLE", "TWN", "JPN", "SPN", "MA", "IT", "CA",
+    "ISRA", "UAE", "CZE", "POL", "SAFR", "FIN", "UKR", "IND", "IRAN", "GER",
+    "ARGN", "LUXE", "BRAZ", "SKOR", "MALA", "SING", "SVN", "HUN", "EUTE", "AGO",
+    "SWED", "EUME", "SWTZ", "KWT", "KEN", "MCO", "LTU", "DEN", "INDO", "THAI",
+    "NETH", "ASRA", "BEL", "DJI", "RWA", "IM", "EGYP", "ITSO", "HRV", "BGR",
+    "POR", "ESRO", "PAKI", "GLOB", "ISS", "SEAL", "AB", "CHBZ", "ROM", "VTNM",
+    "NKOR", "PER", "FRIT", "RP", "GREC", "SVK", "GHA", "MNG", "BGD", "NIG",
+    "CRI", "COL", "MEX", "SDN", "PRY", "MMR", "MUS", "PRI", "MDA", "UGA",
+    "ZWE", "ABS", "QAT", "SAUD", "BELA", "NATO", "STCT", "NICO", "ALG", "KAZ",
+    "AC", "USBZ", "EST", "ECU", "TMMC", "RASC", "O3B", "VENZ", "IRAQ", "AZER",
+    "BOL", "URY", "CZCH", "FGER", "LAOS", "BWA", "JOR", "TUN", "BHR", "LKA", "NPL"
+]);
 const purposeOptions = ref(['Communications', 'Earth Observation', 'Navigation', 'Scientific']);
 const regimeOptions = ref(['LEO', 'MEO', 'GEO', 'HEO']);
 
@@ -625,15 +698,6 @@ const fetchSatellites = async () => {
   try {
     const response = await satelliteApi.getSatellites({
       objectTypes: selectedObjectTypes.value.length > 0 && selectedObjectTypes.value[0] != 'all' ? selectedObjectTypes.value : undefined,
-      attributes: [
-        "noradCatId",
-        "intlDes",
-        "name",
-        "launchDate",
-        "objectType",
-        "countryCode",
-        "orbitCode",
-      ],
     });
 
     satellites.value = response.data || [];
@@ -648,7 +712,6 @@ const fetchSatellites = async () => {
 };
 
 const toggleObjectType = (type: string) => {
-  debugger
   if (type === 'all') {
     selectedObjectTypes.value = [];
   } else {
@@ -691,7 +754,6 @@ const updateCounts = async () => {
 
 const applyFiltersAndSearch = () => {
   let filtered = [...satellites.value];
-  debugger
   // Apply search
   if (currentSearch.value) {
     const searchLower = currentSearch.value.toLowerCase();
@@ -710,11 +772,11 @@ const applyFiltersAndSearch = () => {
   if (selectedRegime.value) {
     filtered = filtered.filter((sat) => sat.orbitCode?.includes(selectedRegime.value));
   }
-  selectedObjectTypes.value.forEach((type) => {
-    if (type !== 'all') {
-      filtered = filtered.filter((sat) => sat.objectType === type);
-    }
-  });
+  if (!selectedObjectTypes.value.includes('all')) {
+    filtered = filtered.filter((sat) => {
+      return selectedObjectTypes.value.some(type => type === sat.objectType);
+    });
+  }
 
   // Apply sorting
   filtered.sort((a, b) => {
@@ -732,6 +794,7 @@ const applyFiltersAndSearch = () => {
   });
 
   filteredSatellites.value = filtered;
+  resetMobileItems();
   scrollTop.value = 0;
 };
 
@@ -746,7 +809,6 @@ const handleSearch = () => {
 };
 
 const applyFilters = () => {
-  // fetchSatellites();
   applyFiltersAndSearch();
 };
 
@@ -761,7 +823,7 @@ const sortBy = (field: keyof Satellite) => {
 };
 
 const getSortIcon = (field: keyof Satellite) => {
-  if (sortField.value !== field) return "↕️";
+  if (sortField.value !== field) return "";
   return sortDirection.value === "asc" ? "↑" : "↓";
 };
 
@@ -769,20 +831,18 @@ const toggleSelection = (item: Satellite) => {
   const index = selectedSatellites.value.findIndex(
     (s) => s.noradCatId === item.noradCatId
   );
-
   if (index >= 0) {
     selectedSatellites.value.splice(index, 1);
     selectionError.value = "";
   } else {
-    if (selectedSatellites.value.length >= 10) {
-      selectionError.value = "Maximum 10 satellites can be selected";
-      setTimeout(() => (selectionError.value = ""), 3000);
-      return;
-    }
     selectedSatellites.value.push(item);
     selectionError.value = "";
   }
-
+  if (selectedSatellites.value.length > 9) {
+    selectionError.value = "Maximum 10 satellites can be selected";
+    setTimeout(() => (selectionError.value = ""), 3000);
+    return;
+  }
   storage.set("selectedSatellites", selectedSatellites.value);
 };
 
@@ -798,7 +858,7 @@ const toggleSelectAll = () => {
     );
   } else {
     filteredSatellites.value.forEach((item) => {
-      if (selectedSatellites.value.length <= 10 && !isSelected(item)) {
+      if (selectedSatellites.value.length < 10 && !isSelected(item)) {
         selectedSatellites.value.push(item);
       }
     });
@@ -808,7 +868,6 @@ const toggleSelectAll = () => {
 };
 
 const isSelected = (item: Satellite) => {
-  debugger
   return selectedSatellites.value.some((s) => s.noradCatId === item.noradCatId);
 };
 
@@ -845,18 +904,11 @@ const getRegimeColor = (orbitCode: string) => {
     'GEO': 'bg-yellow-500',
     'HEO': 'bg-purple-500'
   };
-  return colors[orbitCode as keyof typeof colors] || 'bg-gray-500';
+  const matchedRegime = Object.keys(colors).find(regime => orbitCode.includes(regime));
+
+  return colors[matchedRegime as keyof typeof colors] || 'bg-gray-500';
 };
 
-const getObjectTypeIcon = (type: string) => {
-  const icons = {
-    'PAYLOAD': '●',
-    'ROCKET BODY': '▲',
-    'DEBRIS': '◆',
-    'UNKNOWN': '◯'
-  };
-  return icons[type as keyof typeof icons] || '◯';
-};
 
 const handleScroll = () => {
   if (scrollContainer.value) {
@@ -873,8 +925,7 @@ watch([selectedConstellation, selectedCountry, selectedPurpose, selectedRegime],
 });
 
 onMounted(() => {
-  fetchSatellites();
-
+  fetchSatellites();  
   const saved = storage.get<Satellite[]>("selectedSatellites");
   if (saved) {
     selectedSatellites.value = saved;
