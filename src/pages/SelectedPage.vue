@@ -196,10 +196,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import type { Satellite } from '../types/satellite'
 
-const router = useRouter()
 const selectedItems = ref<Satellite[]>([])
 const showDetailedView = ref(false)
 

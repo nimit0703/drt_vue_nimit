@@ -105,9 +105,9 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 
-interface Props {
+defineProps<{
   isOpen: boolean
-}
+}>()
 
 interface FilterData {
   countryCode: string
@@ -115,7 +115,6 @@ interface FilterData {
   objectTypes: string[]
 }
 
-const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []
